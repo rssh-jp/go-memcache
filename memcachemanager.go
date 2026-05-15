@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"memcache/memcache"
+	"github.com/rssh-jp/go-memcache/memcache"
 )
 
 const (

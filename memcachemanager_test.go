@@ -2,8 +2,9 @@ package memcachemanager
 
 import (
 	"log"
-	"memcache/memcache"
 	"testing"
+
+	"github.com/rssh-jp/go-memcache/memcache"
 )
 
 func initMemcache() {
