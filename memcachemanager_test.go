@@ -1,1 +1,0 @@
-package memcachemanager_test

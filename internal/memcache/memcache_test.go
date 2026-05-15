@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/rssh-jp/go-memcache/memcache"
+	"github.com/rssh-jp/go-memcache/internal/memcache"
 )
 
 // newMockConn は net.Pipe() を使ってモックサーバー付きの Connection を返す。

@@ -6,7 +6,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/rssh-jp/go-memcache/memcache"
+	"github.com/rssh-jp/go-memcache/internal/memcache"
 )
 
 func initMemcache() {
