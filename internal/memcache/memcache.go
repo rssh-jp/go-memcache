@@ -6,10 +6,12 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	newline = "\r\n"
+	newline     = "\r\n"
+	dialTimeout = 5 * time.Second
 )
 
 var (
@@ -24,7 +26,7 @@ type Connection struct {
 }
 
 func Connect(network, address string) (*Connection, error) {
-	conn, err := net.Dial(network, address)
+	conn, err := net.DialTimeout(network, address, dialTimeout)
 	if err != nil {
 		return nil, err
 	}
