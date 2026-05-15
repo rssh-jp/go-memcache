@@ -1,12 +1,16 @@
-package memcache
+//go:build integration
+
+package memcache_test
 
 import (
 	"log"
 	"testing"
+
+	"github.com/rssh-jp/go-memcache/internal/memcache"
 )
 
 func initMemcache() {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		log.Fatal("Could not create connection.")
 	}
@@ -42,7 +46,7 @@ func TestConnect(t *testing.T) {
 		{"tcp", "localhost:11211", true},
 		{"tcp", "localhost:11212", false},
 	} {
-		_, err := Connect(item.network, item.address)
+		_, err := memcache.Connect(item.network, item.address)
 		if item.isSuccess {
 			if err != nil {
 				t.Error(err)
@@ -56,7 +60,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return
@@ -85,7 +89,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return
@@ -148,7 +152,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestSetEx(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return
@@ -175,7 +179,7 @@ func TestSetEx(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return
@@ -205,7 +209,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return
@@ -245,7 +249,7 @@ func TestReplace(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return
@@ -286,7 +290,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestIncrDecr(t *testing.T) {
-	conn, err := Connect("tcp", "localhost:11211")
+	conn, err := memcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		t.Error(err)
 		return

@@ -1,14 +1,17 @@
-package memcachemanager
+//go:build integration
+
+package memcache_test
 
 import (
 	"log"
 	"testing"
 
-	"github.com/rssh-jp/go-memcache/memcache"
+	"github.com/rssh-jp/go-memcache"
+	imemcache "github.com/rssh-jp/go-memcache/internal/memcache"
 )
 
 func initMemcache() {
-	conn, err := memcache.Connect("tcp", "localhost:11211")
+	conn, err := imemcache.Connect("tcp", "localhost:11211")
 	if err != nil {
 		log.Fatal("Could not create connection.")
 	}
@@ -37,26 +40,26 @@ func TestMain(m *testing.M) {
 }
 
 func TestConnection(t *testing.T) {
-	conf := Config{
+	conf := memcache.Config{
 		ParallelNum: 2,
-		ConnectionList: []MemcacheConnection{
+		ConnectionList: []memcache.MemcacheConnection{
 			{"mem1", "tcp", "localhost", "11211"},
 		},
 	}
-	err := Initialize(conf)
+	err := memcache.Initialize(conf)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestGet(t *testing.T) {
-	conf := Config{
+	conf := memcache.Config{
 		ParallelNum: 2,
-		ConnectionList: []MemcacheConnection{
+		ConnectionList: []memcache.MemcacheConnection{
 			{"mem1", "tcp", "localhost", "11211"},
 		},
 	}
-	err := Initialize(conf)
+	err := memcache.Initialize(conf)
 	if err != nil {
 		t.Error(err)
 	}
@@ -68,7 +71,7 @@ func TestGet(t *testing.T) {
 		{"test", "test", true},
 		{"test1", "", false},
 	} {
-		res, err := Get(item.key)
+		res, err := memcache.Get(item.key)
 		if err != nil {
 			t.Error(err)
 			return
@@ -82,15 +85,16 @@ func TestGet(t *testing.T) {
 		}
 	}
 }
+
 func TestSet(t *testing.T) {
-	conf := Config{
+	conf := memcache.Config{
 		ParallelNum: 2,
-		ConnectionList: []MemcacheConnection{
+		ConnectionList: []memcache.MemcacheConnection{
 			{"mem1", "tcp", "localhost", "11211"},
 			{"mem2", "tcp", "localhost", "11211"},
 		},
 	}
-	err := Initialize(conf)
+	err := memcache.Initialize(conf)
 	if err != nil {
 		t.Error(err)
 	}
@@ -101,7 +105,7 @@ func TestSet(t *testing.T) {
 		{"test1", "test1"},
 		{"test2", "test2"},
 	} {
-		err := Set(item.key, item.value)
+		err := memcache.Set(item.key, item.value)
 		if err != nil {
 			t.Error(err)
 			return
@@ -116,7 +120,7 @@ func TestSet(t *testing.T) {
 			key = append(key, 49)
 		}
 		value := "test"
-		err := Set(string(key), value)
+		err := memcache.Set(string(key), value)
 		if err != nil {
 			t.Error("Could not set memcache long key.", err)
 			return
@@ -131,7 +135,7 @@ func TestSet(t *testing.T) {
 		for i := 0; i < length; i++ {
 			value = append(value, 49)
 		}
-		err := Set(key, string(value))
+		err := memcache.Set(key, string(value))
 		if err != nil {
 			t.Error("Could not set memcache long value.", err)
 			return
@@ -140,24 +144,24 @@ func TestSet(t *testing.T) {
 }
 
 func TestSetEx(t *testing.T) {
-	conf := Config{
+	conf := memcache.Config{
 		ParallelNum: 2,
-		ConnectionList: []MemcacheConnection{
+		ConnectionList: []memcache.MemcacheConnection{
 			{"mem1", "tcp", "localhost", "11211"},
 		},
 	}
-	err := Initialize(conf)
+	err := memcache.Initialize(conf)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = SetEx("setex_mgr_test", "hello", 60)
+	err = memcache.SetEx("setex_mgr_test", "hello", 60)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	val, err := Get("setex_mgr_test")
+	val, err := memcache.Get("setex_mgr_test")
 	if err != nil {
 		t.Error(err)
 		return
@@ -168,30 +172,30 @@ func TestSetEx(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	conf := Config{
+	conf := memcache.Config{
 		ParallelNum: 2,
-		ConnectionList: []MemcacheConnection{
+		ConnectionList: []memcache.MemcacheConnection{
 			{"mem1", "tcp", "localhost", "11211"},
 		},
 	}
-	err := Initialize(conf)
+	err := memcache.Initialize(conf)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = Set("del_mgr_test", "value")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = Delete("del_mgr_test")
+	err = memcache.Set("del_mgr_test", "value")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	val, err := Get("del_mgr_test")
+	err = memcache.Delete("del_mgr_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	val, err := memcache.Get("del_mgr_test")
 	if err != nil {
 		t.Error(err)
 		return

@@ -1,11 +1,11 @@
-package memcachemanager
+package memcache
 
 import (
 	"errors"
 	"log"
 	"time"
 
-	"github.com/rssh-jp/go-memcache/memcache"
+	imc "github.com/rssh-jp/go-memcache/internal/memcache"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 )
 
 var (
-	connections = make(map[string]chan *memcache.Connection)
+	connections = make(map[string]chan *imc.Connection)
 	timeOut     = time.Second * 5
 )
 
@@ -27,9 +27,9 @@ type MemcacheConnection struct {
 
 func Initialize(conf Config) (err error) {
 	for _, info := range conf.ConnectionList {
-		connections[info.Name] = make(chan *memcache.Connection, conf.ParallelNum)
+		connections[info.Name] = make(chan *imc.Connection, conf.ParallelNum)
 		for i := 0; i < conf.ParallelNum; i++ {
-			conn, err := memcache.Connect(info.Network, info.Host+":"+info.Port)
+			conn, err := imc.Connect(info.Network, info.Host+":"+info.Port)
 			if err != nil {
 				return err
 			}
@@ -62,7 +62,7 @@ func Get(key string) (ret string, err error) {
 
 func Set(key, value string) (err error) {
 	for name, conns := range connections {
-		var conn *memcache.Connection
+		var conn *imc.Connection
 		select {
 		case conn = <-conns:
 		case <-time.After(timeOut):
@@ -87,7 +87,7 @@ func Set(key, value string) (err error) {
 
 func SetEx(key, value string, exptime int) (err error) {
 	for name, conns := range connections {
-		var conn *memcache.Connection
+		var conn *imc.Connection
 		select {
 		case conn = <-conns:
 		case <-time.After(timeOut):
@@ -112,7 +112,7 @@ func SetEx(key, value string, exptime int) (err error) {
 
 func Delete(key string) (err error) {
 	for name, conns := range connections {
-		var conn *memcache.Connection
+		var conn *imc.Connection
 		select {
 		case conn = <-conns:
 		case <-time.After(timeOut):
@@ -131,7 +131,7 @@ func Delete(key string) (err error) {
 }
 
 // コネクション探索
-func searchConnection() (conn *memcache.Connection, name string, err error) {
+func searchConnection() (conn *imc.Connection, name string, err error) {
 	// 最速で接続できるところを探す
 	conn, name = searchConnectionTimeout(shortTimeOut)
 
@@ -149,7 +149,7 @@ func searchConnection() (conn *memcache.Connection, name string, err error) {
 }
 
 // タイムアウト指定でコネクションを探す
-func searchConnectionTimeout(d time.Duration) (conn *memcache.Connection, name string) {
+func searchConnectionTimeout(d time.Duration) (conn *imc.Connection, name string) {
 	for n, conns := range connections {
 		select {
 		case conn = <-conns:
