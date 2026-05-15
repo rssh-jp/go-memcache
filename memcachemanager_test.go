@@ -96,15 +96,12 @@ func TestSet(t *testing.T) {
 	}
 
 	for _, item := range []struct {
-		name, key, value string
-		isSuccess        bool
+		key, value string
 	}{
-		{"mem1", "test1", "test1", true},
-		{"mem1", "test2", "test2", true},
-		{"mem2", "test1", "test1", true},
-		{"mem2", "test2", "test2", true},
+		{"test1", "test1"},
+		{"test2", "test2"},
 	} {
-		err := Set(item.name, item.key, item.value)
+		err := Set(item.key, item.value)
 		if err != nil {
 			t.Error(err)
 			return
@@ -119,7 +116,7 @@ func TestSet(t *testing.T) {
 			key = append(key, 49)
 		}
 		value := "test"
-		err := Set("mem1", string(key), value)
+		err := Set(string(key), value)
 		if err != nil {
 			t.Error("Could not set memcache long key.", err)
 			return
@@ -134,10 +131,72 @@ func TestSet(t *testing.T) {
 		for i := 0; i < length; i++ {
 			value = append(value, 49)
 		}
-		err := Set("mem1", key, string(value))
+		err := Set(key, string(value))
 		if err != nil {
 			t.Error("Could not set memcache long value.", err)
 			return
 		}
+	}
+}
+
+func TestSetEx(t *testing.T) {
+	conf := Config{
+		ParallelNum: 2,
+		ConnectionList: []MemcacheConnection{
+			{"mem1", "tcp", "localhost", "11211"},
+		},
+	}
+	err := Initialize(conf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = SetEx("setex_mgr_test", "hello", 60)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	val, err := Get("setex_mgr_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if val != "hello" {
+		t.Errorf("SetEx: got %s, want hello", val)
+	}
+}
+
+func TestDelete(t *testing.T) {
+	conf := Config{
+		ParallelNum: 2,
+		ConnectionList: []MemcacheConnection{
+			{"mem1", "tcp", "localhost", "11211"},
+		},
+	}
+	err := Initialize(conf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = Set("del_mgr_test", "value")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = Delete("del_mgr_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	val, err := Get("del_mgr_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if val != "" {
+		t.Errorf("Delete: expected empty after delete, got %s", val)
 	}
 }
