@@ -146,3 +146,176 @@ func TestSet(t *testing.T) {
 		}
 	}
 }
+
+func TestSetEx(t *testing.T) {
+	conn, err := Connect("tcp", "localhost:11211")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	ok, err := conn.SetEx("setex_test", "hello", 60)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !ok {
+		t.Error("SetEx: expected STORED")
+		return
+	}
+
+	val, err := conn.Get("setex_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if val != "hello" {
+		t.Errorf("SetEx: got %s, want hello", val)
+	}
+}
+
+func TestAdd(t *testing.T) {
+	conn, err := Connect("tcp", "localhost:11211")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// 存在しないキーへの Add は成功する
+	conn.Delete("add_test")
+	ok, err := conn.Add("add_test", "first")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !ok {
+		t.Error("Add: expected STORED for new key")
+		return
+	}
+
+	// 同じキーへの再 Add は NOT_STORED（false, nil）
+	ok, err = conn.Add("add_test", "second")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if ok {
+		t.Error("Add: expected NOT_STORED for existing key")
+	}
+}
+
+func TestReplace(t *testing.T) {
+	conn, err := Connect("tcp", "localhost:11211")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// 存在するキーへの Replace は成功する
+	conn.Set("replace_test", "original")
+	ok, err := conn.Replace("replace_test", "replaced")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !ok {
+		t.Error("Replace: expected STORED for existing key")
+		return
+	}
+
+	val, err := conn.Get("replace_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if val != "replaced" {
+		t.Errorf("Replace: got %s, want replaced", val)
+	}
+
+	// 存在しないキーへの Replace は NOT_STORED（false, nil）
+	conn.Delete("replace_nokey")
+	ok, err = conn.Replace("replace_nokey", "value")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if ok {
+		t.Error("Replace: expected NOT_STORED for non-existent key")
+	}
+}
+
+func TestDelete(t *testing.T) {
+	conn, err := Connect("tcp", "localhost:11211")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	conn.Set("delete_test", "value")
+
+	// 存在するキーの削除は true
+	ok, err := conn.Delete("delete_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !ok {
+		t.Error("Delete: expected DELETED")
+		return
+	}
+
+	// 削除後は Get で空文字
+	val, err := conn.Get("delete_test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if val != "" {
+		t.Errorf("Delete: expected empty after delete, got %s", val)
+	}
+
+	// 存在しないキーの削除は false, nil
+	ok, err = conn.Delete("nonexistent_key_xyz")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if ok {
+		t.Error("Delete: expected NOT_FOUND for non-existent key")
+	}
+}
+
+func TestIncrDecr(t *testing.T) {
+	conn, err := Connect("tcp", "localhost:11211")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	conn.Set("counter", "10")
+
+	n, err := conn.Increment("counter", 5)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if n != 15 {
+		t.Errorf("Increment: got %d, want 15", n)
+	}
+
+	n, err = conn.Decrement("counter", 3)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if n != 12 {
+		t.Errorf("Decrement: got %d, want 12", n)
+	}
+
+	// 存在しないキーへの Increment はエラー
+	conn.Delete("no_counter")
+	_, err = conn.Increment("no_counter", 1)
+	if err == nil {
+		t.Error("Increment: expected error for non-existent key")
+	}
+}

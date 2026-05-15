@@ -15,6 +15,7 @@ const (
 var (
 	ErrFlushAllFailure = errors.New("memcache: Could not flush_all")
 	ErrSetFailure      = errors.New("memcache: Could not set")
+	ErrDeleteFailure   = errors.New("memcache: Could not delete")
 )
 
 type Connection struct {
@@ -36,7 +37,7 @@ func Connect(network, address string) (*Connection, error) {
 	}, nil
 }
 func (conn *Connection) Disconnect() {
-	defer conn.conn.Close()
+	conn.conn.Close()
 }
 func (conn *Connection) FlushAll() (bool, error) {
 	err := conn.writeString("flush_all" + newline)
@@ -45,6 +46,9 @@ func (conn *Connection) FlushAll() (bool, error) {
 	}
 
 	str, err := conn.readLine()
+	if err != nil {
+		return false, err
+	}
 	if !strings.HasPrefix(str, "OK") {
 		return false, ErrFlushAllFailure
 	}
@@ -83,27 +87,79 @@ func (conn *Connection) Get(key string) (ret string, err error) {
 
 	return
 }
-func (conn *Connection) Set(key, value string) (isSuccess bool, err error) {
-	err = conn.writeString("set " + key + " 0 0 " + strconv.Itoa(len(value)) + newline)
-	if err != nil {
-		return
-	}
+func (conn *Connection) Set(key, value string) (bool, error) {
+	return conn.storeCommand("set", key, value, 0)
+}
 
+func (conn *Connection) SetEx(key, value string, exptime int) (bool, error) {
+	return conn.storeCommand("set", key, value, exptime)
+}
+
+func (conn *Connection) Add(key, value string) (bool, error) {
+	return conn.storeCommand("add", key, value, 0)
+}
+
+func (conn *Connection) Replace(key, value string) (bool, error) {
+	return conn.storeCommand("replace", key, value, 0)
+}
+
+func (conn *Connection) Delete(key string) (bool, error) {
+	err := conn.writeString("delete " + key + newline)
+	if err != nil {
+		return false, err
+	}
+	str, err := conn.readLine()
+	if err != nil {
+		return false, err
+	}
+	if strings.Contains(str, "ERROR") {
+		return false, ErrDeleteFailure
+	}
+	return strings.HasPrefix(str, "DELETED"), nil
+}
+
+func (conn *Connection) Increment(key string, delta uint64) (uint64, error) {
+	return conn.incrDecrCommand("incr", key, delta)
+}
+
+func (conn *Connection) Decrement(key string, delta uint64) (uint64, error) {
+	return conn.incrDecrCommand("decr", key, delta)
+}
+
+func (conn *Connection) storeCommand(command, key, value string, exptime int) (bool, error) {
+	err := conn.writeString(command + " " + key + " 0 " + strconv.Itoa(exptime) + " " + strconv.Itoa(len(value)) + newline)
+	if err != nil {
+		return false, err
+	}
 	err = conn.writeString(value + newline)
 	if err != nil {
-		return
+		return false, err
 	}
-
 	str, err := conn.readLine()
-	if strings.Contains(str, "ERROR") {
-		err = ErrSetFailure
-		return
+	if err != nil {
+		return false, err
 	}
-
-	isSuccess = strings.HasPrefix(str, "STORED")
-
-	return
+	if strings.Contains(str, "ERROR") {
+		return false, ErrSetFailure
+	}
+	return strings.HasPrefix(str, "STORED"), nil
 }
+
+func (conn *Connection) incrDecrCommand(command, key string, delta uint64) (uint64, error) {
+	err := conn.writeString(command + " " + key + " " + strconv.FormatUint(delta, 10) + newline)
+	if err != nil {
+		return 0, err
+	}
+	str, err := conn.readLine()
+	if err != nil {
+		return 0, err
+	}
+	if strings.Contains(str, "ERROR") || strings.HasPrefix(str, "NOT_FOUND") {
+		return 0, errors.New("memcache: " + command + " failed: " + str)
+	}
+	return strconv.ParseUint(strings.TrimSpace(str), 10, 64)
+}
+
 func (conn *Connection) readLine() (string, error) {
 	conn.rw.Flush()
 	var str string
@@ -127,7 +183,10 @@ func (conn *Connection) writeString(s string) error {
 		if end > len(s) {
 			end = len(s)
 		}
-		conn.rw.Write([]byte(s[i:end]))
+		_, err := conn.rw.Write([]byte(s[i:end]))
+		if err != nil {
+			return err
+		}
 		i += bufSize
 	}
 	return nil

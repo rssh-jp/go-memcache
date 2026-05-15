@@ -60,39 +60,73 @@ func Get(key string) (ret string, err error) {
 	return
 }
 
-func Set(name, key, value string) (err error) {
-	conns, ok := connections[name]
-	if !ok {
-		err = errors.New("Could not found memcache connection. name=" + name)
-		log.Println(err)
-		return
-	}
-
-	var conn *memcache.Connection
-	select {
-	case conn = <-conns:
-	case <-time.After(timeOut):
-		err = errors.New("Timeout")
-		log.Println(err)
-		return
-	}
-
-	defer func() {
-		if conn == nil {
+func Set(key, value string) (err error) {
+	for name, conns := range connections {
+		var conn *memcache.Connection
+		select {
+		case conn = <-conns:
+		case <-time.After(timeOut):
+			err = errors.New("Timeout")
+			log.Println(err)
 			return
 		}
+
+		var isSuccess bool
+		isSuccess, err = conn.Set(key, value)
 		connections[name] <- conn
-	}()
-
-	isSuccess, err := conn.Set(key, value)
-	if err != nil {
-		return
+		if err != nil {
+			return
+		}
+		if !isSuccess {
+			err = errors.New("Could not success memcache set.")
+			return
+		}
 	}
-	if !isSuccess {
-		err = errors.New("Could not success memcache set.")
-		return
-	}
+	return
+}
 
+func SetEx(key, value string, exptime int) (err error) {
+	for name, conns := range connections {
+		var conn *memcache.Connection
+		select {
+		case conn = <-conns:
+		case <-time.After(timeOut):
+			err = errors.New("Timeout")
+			log.Println(err)
+			return
+		}
+
+		var isSuccess bool
+		isSuccess, err = conn.SetEx(key, value, exptime)
+		connections[name] <- conn
+		if err != nil {
+			return
+		}
+		if !isSuccess {
+			err = errors.New("Could not success memcache setex.")
+			return
+		}
+	}
+	return
+}
+
+func Delete(key string) (err error) {
+	for name, conns := range connections {
+		var conn *memcache.Connection
+		select {
+		case conn = <-conns:
+		case <-time.After(timeOut):
+			err = errors.New("Timeout")
+			log.Println(err)
+			return
+		}
+
+		_, err = conn.Delete(key)
+		connections[name] <- conn
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
